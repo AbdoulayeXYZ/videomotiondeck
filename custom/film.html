@@ -1,0 +1,104 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+/* Custom film template (videomotiondeck). One page = the whole film. window.render(t) draws time t.
+   Put your brand tokens here and NOTHING else as colour: the charter is law (see references/custom_film.md). */
+@font-face{font-family:M;src:url(../assets/fonts/Montserrat-500.ttf);font-weight:500}
+@font-face{font-family:M;src:url(../assets/fonts/Montserrat-700.ttf);font-weight:700}
+@font-face{font-family:M;src:url(../assets/fonts/Montserrat-800.ttf);font-weight:800}
+:root{--bg:#020D19;--ac:#00C8BE;--r:#FF4545;--mu:#8FA6B8}
+*{box-sizing:border-box}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:var(--bg);font-family:M,sans-serif;color:#fff}
+.s{position:absolute;inset:0;overflow:hidden;display:none}.a{position:absolute}.full{position:absolute;inset:0}
+.ff{position:absolute;left:0;top:0;width:1920px;height:1080px;object-fit:cover}
+.grid{position:absolute;inset:-200px;background-image:linear-gradient(rgba(0,200,190,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,190,.05) 1px,transparent 1px);background-size:96px 96px}
+.glow{position:absolute;inset:0;background:radial-gradient(ellipse 900px 600px at 62% 48%,rgba(0,163,163,.16),transparent 70%)}
+.vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%);pointer-events:none;z-index:50}
+/* caption pattern: small spaced kicker + short headline ending with an accent period */
+.kick{font-weight:700;font-size:17px;letter-spacing:6px;color:var(--ac);text-transform:uppercase;white-space:nowrap}
+.hl{font-weight:800;font-size:74px;letter-spacing:-1px;line-height:1.06;white-space:nowrap}
+.d{color:var(--ac)}.rd{color:var(--r)}.mu{color:var(--mu)}
+.num{font-weight:800;letter-spacing:-4px;line-height:1}
+.cap{position:absolute;left:84px;bottom:92px}
+.mk{overflow:hidden;padding-bottom:4px}.mk>div{transform:translateY(110%)}
+.shadeB{position:absolute;inset:0;background:linear-gradient(0deg,rgba(2,13,25,.92) 0%,rgba(2,13,25,.55) 26%,transparent 50%)}
+.bar{height:3px;background:rgba(255,255,255,.14);position:relative;overflow:hidden}.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ac);width:0}
+.win{position:absolute;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 50px 120px rgba(0,0,0,.6)}
+.win img{display:block;width:100%;height:auto}
+</style></head><body>
+<div class="full" id="bgL"><div class="grid" id="grid"></div><div class="glow"></div></div>
+
+<!-- S1 footage + counter (e.g. night open). Frames: footage/f0001.jpg... (extract with ffmpeg, grade there) -->
+<div class="s" id="S1"><img id="f1" class="ff"><div class="shadeB"></div>
+ <div class="a" id="cnt" style="left:1240px;top:380px;opacity:0"><div class="num" id="cntv" style="font-size:230px">0 m</div><div class="bar" style="width:520px;margin-top:18px"><i id="cntb"></i></div><div class="kick" style="margin-top:16px;color:var(--mu)">label</div></div>
+ <div class="cap"><div class="mk"><div class="kick" id="k1"></div></div><div class="mk"><div class="hl" id="h1"></div></div></div>
+</div>
+
+<!-- S2 abstract stat: dot grid + big number -->
+<div class="s" id="S2">
+ <svg id="g1" class="a" style="left:120px;top:190px" width="520" height="520"></svg>
+ <div class="a" style="left:760px;top:330px"><div class="num" id="v1" style="font-size:260px">0 %</div><div class="kick" style="margin-top:14px">what the number means</div></div>
+</div>
+
+<!-- S3 platform: real screenshot in 3D + footage playing inside a player window (then picture-in-picture) -->
+<div class="s" id="S3">
+ <div class="a" style="left:0;top:0;width:1920px;height:1080px;perspective:2200px">
+  <div class="a" id="pnl" style="left:560px;top:96px;width:1240px;transform-style:preserve-3d">
+   <div class="win" style="left:0;top:0;width:1240px"><img src="screens/dashboard.jpg"></div>
+   <div class="a" id="vplay" style="left:150px;top:150px;width:940px;border-radius:12px;overflow:hidden;background:#0b1620;box-shadow:0 40px 100px rgba(0,0,0,.6);opacity:0">
+    <div style="height:46px;background:#00807f;display:flex;align-items:center;padding:0 18px;font-weight:700;font-size:16px">Vidéo · Caméra cabine</div>
+    <img id="fV" style="width:940px;height:529px;object-fit:cover;display:block"></div>
+  </div></div>
+ <div class="cap"><div class="mk"><div class="kick" id="k3"></div></div><div class="mk"><div class="hl" id="h3"></div></div></div>
+</div>
+
+<!-- S4 close -->
+<div class="s" id="S4"><div class="a" style="left:0;right:0;top:420px;text-align:center"><div class="mk"><div class="hl" id="h4" style="font-size:72px">Tagline<span class="d">.</span></div></div></div>
+ <div class="full" id="out" style="background:var(--bg);opacity:0"></div></div>
+
+<div class="vig"></div>
+<script>
+const TM=__TIMING__;const PH=TM.ph;const P=i=>PH[i][0],E=i=>PH[i][1];const TOT=TM.total;
+const cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),ex=x=>{x=cl(x);return x===1?1:1-Math.pow(2,-10*x)},eio=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2},eo=x=>1-Math.pow(1-cl(x),3);
+const $=id=>document.getElementById(id);
+function up(el,t,a,d=.5,dy=40){const k=ex((t-a)/d);el.style.opacity=cl((t-a)/.25);el.style.transform=`translateY(${(dy*(1-k)).toFixed(1)}px)`}
+// mask reveal (inner div slides up), optional exit at b
+function mr(el,t,a,b){let y=110*(1-eo((t-a)/.55));if(b!==undefined&&t>b)y=-110*eio((t-b)/.4);el.style.transform=`translateY(${y.toFixed(1)}%)`}
+function setH(el,h){if(el.dataset.h!==h){el.dataset.h=h;el.innerHTML=h}}
+// image sequence: dir/f0001.jpg..; rev=true plays backwards
+async function seq(img,dir,i,n,rev){i=Math.max(1,Math.min(n,i));if(rev)i=n+1-i;const s=dir+'/f'+String(i).padStart(4,'0')+'.jpg';if(!img.src.endsWith(s)){img.src=s;await img.decode().catch(()=>{})}}
+// caption sequence [[time,kicker,headline],...] — kicker stays while it repeats, headline swaps with mask
+function capSeq(kEl,hEl,t,L){let i=-1;for(let j=0;j<L.length;j++)if(t>=L[j][0])i=j;if(i<0){mr(kEl,t,1e9);mr(hEl,t,1e9);return}
+ const a=L[i][0],nx=i+1<L.length?L[i+1][0]:1e9;setH(kEl,L[i][1]);setH(hEl,L[i][2]);
+ if(i>0&&L[i-1][1]===L[i][1])kEl.style.transform='translateY(0%)';else mr(kEl,t,a,(i+1<L.length&&L[i+1][1]!==L[i][1])?nx-.32:undefined);
+ mr(hEl,t,a+.06,nx-.32)}
+(()=>{let s='';for(let i=0;i<100;i++)s+=`<circle class="dt" cx="${(i%10)*50+26}" cy="${Math.floor(i/10)*50+26}" r="15" fill="rgba(255,255,255,.1)" data-hi="${i>=92?1:0}"/>`;$('g1').innerHTML=s})();
+
+// ---- scenes: start times tied to voice phrases (P(i)); edit freely
+const SC=[['S1',0],['S2',P(2)-.15],['S3',P(4)-.15],['S4',P(6)-.15]];
+const NOFADE=[];           // ids that must hard-cut (match cuts, reference footage)
+const FOOT=['S1','S3'];    // scenes with full-bleed footage (hide the grid background)
+const RS={};
+RS.S1=async(t,u)=>{await seq($('f1'),'footage',1+Math.floor(u*25),100);$('f1').style.transform=`scale(${(1.1-.05*u/6).toFixed(4)})`;
+ const a=P(1);const f=eo((t-a)/1.1);const c=$('cnt');c.style.opacity=cl((t-a)/.25);setH($('cntv'),Math.round(17*f)+' m');$('cntb').style.width=(100*f)+'%';
+ capSeq($('k1'),$('h1'),t,[[P(0),'Kicker','Headline one<span class="d">.</span>'],[P(1),'Kicker','Headline two<span class="d">.</span>']])};
+RS.S2=async(t,u)=>{const a=P(3);document.querySelectorAll('.dt').forEach((d,i)=>{d.setAttribute('opacity',cl((u-.1-i*.005)/.2));if(d.dataset.hi==1)d.setAttribute('fill',t>a+.3?'#FF4545':'rgba(255,255,255,.1)')});setH($('v1'),Math.round(8*ex((t-a)/1))+' %')};
+RS.S3=async(t,u,t0)=>{const kk=ex(u/.9);$('pnl').style.transform=`rotateY(${(-16+6*kk).toFixed(2)}deg) rotateX(${(7-3*kk).toFixed(2)}deg) scale(${(.9+.1*kk).toFixed(3)})`;
+ const a=P(5)-.1,b=a+2.5;const vp=$('vplay');const kv=ex((t-a)/.5),kp=eio((t-b)/.55);vp.style.opacity=cl((t-a)/.2);vp.style.transformOrigin='0 0';
+ vp.style.transform=`translate(${(-130*kp).toFixed(1)}px,${(-90*kp).toFixed(1)}px) translateZ(${(120*kv).toFixed(0)}px) scale(${((.92+.08*kv)*(1-.5*kp)).toFixed(4)})`;
+ if(t>a-.1)await seq($('fV'),'footage2',1+Math.floor((t-a)*25),100);
+ capSeq($('k3'),$('h3'),t,[[t0+.05,'Platform','Every alert<span class="d">.</span>'],[a,'Platform','The video<span class="d">.</span>']])};
+RS.S4=async(t,u)=>{mr($('h4'),u,.2);$('out').style.opacity=cl((t-(TOT-.7))/.6)};
+
+let shown=[];
+async function render(t){
+ $('grid').style.transform=`translate(${(-t*7)%96}px,${(-t*3)%96}px)`;
+ let k=0;for(let i=0;i<SC.length;i++)if(t>=SC[i][1])k=i;
+ const id=SC[k][0],t0=SC[k][1],u=t-t0,XF=.28;
+ const prev=(k>0&&u<XF&&!NOFADE.includes(id)&&!NOFADE.includes(SC[k-1][0]))?SC[k-1]:null;   // 0.28 s crossfade
+ const show=prev?[prev[0],id]:[id];
+ if(show.join()!==shown.join()){SC.forEach(s=>$(s[0]).style.display='none');show.forEach(s=>$(s).style.display='block');shown=show}
+ if(prev){await RS[prev[0]](t,t-prev[1],prev[1]);$(prev[0]).style.opacity=1-eo(u/XF);$(prev[0]).style.zIndex=1}
+ await RS[id](t,u,t0);$(id).style.zIndex=2;$(id).style.opacity=prev?eo(u/XF):1;
+ $('bgL').style.opacity=FOOT.includes(id)?0:1;
+}
+window.render=render;
+</script></body></html>
